@@ -1,0 +1,69 @@
+{
+	"name": "df_silver_incidenteRuta",
+	"properties": {
+		"folder": {
+			"name": "Silver"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "dw_bronze_IncidenteRuta_sql",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "dw_silver_incidenteRuta_sql",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          AnioFuente as string,",
+				"          IncidenteId as string,",
+				"          RutaHistoricaId as string,",
+				"          EsPrincipal as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1",
+				"source1 derive(IncidenteId = trim(IncidenteId),",
+				"          RutaHistoricaId = trim(RutaHistoricaId),",
+				"          EsPrincipal = iif(lower(trim(EsPrincipal)) == 'true' || trim(EsPrincipal) == '1', true(), false())) ~> derivedColumn1",
+				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          IncidenteId as string,",
+				"          RutaHistoricaId as string,",
+				"          EsPrincipal as boolean",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          IncidenteId,",
+				"          RutaHistoricaId,",
+				"          EsPrincipal",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

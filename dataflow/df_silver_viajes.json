@@ -1,16 +1,102 @@
 {
-	"name": "dataflow1",
+	"name": "df_silver_viajes",
 	"properties": {
 		"folder": {
 			"name": "Silver"
 		},
 		"type": "MappingDataFlow",
 		"typeProperties": {
-			"sources": [],
-			"sinks": [],
-			"transformations": [],
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "dw_bronze_viajes_sql",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "dw_silver_viajes_sql",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "derivedColumn2"
+				},
+				{
+					"name": "derivedColumn3"
+				}
+			],
 			"scriptLines": [
-				""
+				"source(output(",
+				"          AnioFuente as string,",
+				"          ViajeId as string,",
+				"          RutaHistoricaId as string,",
+				"          VehiculoId as string,",
+				"          FechaServicio as string,",
+				"          HoraProgramada as string,",
+				"          HoraSalida as string,",
+				"          HoraLlegada as string,",
+				"          ValidacionesTarjeta as string,",
+				"          KmRecorridos as string,",
+				"          EstadoViaje as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1",
+				"source1 derive(FechaServicio = iif(instr(FechaServicio, '/') > 0, toDate(FechaServicio, 'dd/MM/yyyy'), toDate(FechaServicio, 'yyyy-MM-dd')),",
+				"          HoraProgramada = toTimestamp(right(trim(HoraProgramada), 8), 'HH:mm:ss'),",
+				"          HoraSalida = toTimestamp(right(trim(HoraSalida), 8), 'HH:mm:ss'),",
+				"          HoraLlegada = toTimestamp(right(trim(HoraLlegada), 8), 'HH:mm:ss')) ~> derivedColumn1",
+				"derivedColumn1 derive(ViajeId = iif(startsWith(trim(ViajeId), 'VJ-'), trim(ViajeId), concat('VJ-', toString(year(FechaServicio)), '-', lpad(trim(ViajeId), 5, '0'))),",
+				"          RutaHistoricaId = iif(startsWith(trim(RutaHistoricaId), 'RH-'), trim(RutaHistoricaId), iif(startsWith(trim(RutaHistoricaId), 'R-'), concat('RH-', substring(trim(RutaHistoricaId), 3, length(trim(RutaHistoricaId)))), iif(startsWith(trim(RutaHistoricaId), 'Ruta '), concat('RH-', lpad(trim(substring(trim(RutaHistoricaId), 5, length(trim(RutaHistoricaId)))), 2, '0')), concat('RH-', lpad(trim(RutaHistoricaId), 2, '0'))))),",
+				"          VehiculoId = iif(startsWith(trim(VehiculoId), 'V-'), trim(VehiculoId), concat('V-', lpad(trim(VehiculoId), 3, '0'))),",
+				"          EstadoViaje = upper(trim(EstadoViaje))) ~> derivedColumn2",
+				"derivedColumn2 derive(ValidacionesTarjeta = iif(isNull(ValidacionesTarjeta) || trim(ValidacionesTarjeta) == '', 0, toInteger(trim(ValidacionesTarjeta))),",
+				"          KmRecorridos = toDecimal(replace(trim(KmRecorridos), ',', '.'), 10, 2)) ~> derivedColumn3",
+				"derivedColumn3 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          ViajeId as string,",
+				"          RutaHistoricaId as string,",
+				"          VehiculoId as string,",
+				"          FechaServicio as date,",
+				"          HoraProgramada as timestamp,",
+				"          HoraSalida as timestamp,",
+				"          HoraLlegada as timestamp,",
+				"          ValidacionesTarjeta as integer,",
+				"          KmRecorridos as decimal(8,1),",
+				"          EstadoViaje as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          ViajeId,",
+				"          RutaHistoricaId,",
+				"          VehiculoId,",
+				"          FechaServicio,",
+				"          HoraProgramada,",
+				"          HoraSalida,",
+				"          HoraLlegada,",
+				"          ValidacionesTarjeta,",
+				"          KmRecorridos,",
+				"          EstadoViaje",
+				"     )) ~> sink1"
 			]
 		}
 	}

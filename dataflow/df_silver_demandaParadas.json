@@ -1,0 +1,99 @@
+{
+	"name": "df_silver_demandaParadas",
+	"properties": {
+		"folder": {
+			"name": "Silver"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "dw_bronze_demandaparadas_sql",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "dw_silver_DemandaParadas_sql",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "derivedColumn2"
+				},
+				{
+					"name": "derivedColumn3"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          AnioFuente as string,",
+				"          DemandaId as string,",
+				"          FechaServicio as string,",
+				"          RutaHistoricaId as string,",
+				"          ParadaHistoricaId as string,",
+				"          Franja as string,",
+				"          ValidacionesTarjeta as string,",
+				"          Descensos as string,",
+				"          DemandaNoAtendida as string,",
+				"          Metodo as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1",
+				"source1 derive(DemandaId = iif(!isNull(DemandaId) && trim(DemandaId) != '', trim(DemandaId), concat('DM-', toString(year(iif(instr(FechaServicio, '/') > 0, toDate(FechaServicio, 'dd/MM/yyyy'), toDate(FechaServicio, 'yyyy-MM-dd')))), '-', lpad(toString(byName('row_num')), 5, '0'))),",
+				"          RutaHistoricaId = iif(startsWith(trim(RutaHistoricaId), 'RH-'), trim(RutaHistoricaId), iif(startsWith(trim(RutaHistoricaId), 'R-'), concat('RH-', substring(trim(RutaHistoricaId), 3, length(trim(RutaHistoricaId)))), iif(startsWith(trim(RutaHistoricaId), 'Ruta '), concat('RH-', lpad(trim(substring(trim(RutaHistoricaId), 6, length(trim(RutaHistoricaId)))), 2, '0')), concat('RH-', lpad(trim(RutaHistoricaId), 2, '0'))))),",
+				"          ParadaHistoricaId = regexReplace(regexReplace(trim(ParadaHistoricaId), '(-MC)?-NEW$', ''), '^MC-01$', 'P220')) ~> derivedColumn1",
+				"derivedColumn1 derive(FechaServicio = iif(instr(FechaServicio, '/') > 0, toDate(FechaServicio, 'dd/MM/yyyy'), toDate(FechaServicio, 'yyyy-MM-dd')),",
+				"          Franja = trim(Franja),",
+				"          ValidacionesTarjeta = iif(isNull(ValidacionesTarjeta) || trim(ValidacionesTarjeta) == '', 0, toInteger(trim(ValidacionesTarjeta)))) ~> derivedColumn2",
+				"derivedColumn2 derive(Descensos = iif(isNull(Descensos) || trim(Descensos) == '', 0, toInteger(trim(Descensos))),",
+				"          DemandaNoAtendida = iif(isNull(DemandaNoAtendida) || trim(DemandaNoAtendida) == '', 0, toInteger(trim(DemandaNoAtendida))),",
+				"          Metodo = upper(trim(Metodo))) ~> derivedColumn3",
+				"derivedColumn3 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          DemandaId as string,",
+				"          FechaServicio as date,",
+				"          RutaHistoricaId as string,",
+				"          ParadaHistoricaId as string,",
+				"          Franja as string,",
+				"          ValidacionesTarjeta as integer,",
+				"          Descensos as integer,",
+				"          DemandaNoAtendida as integer,",
+				"          Metodo as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          DemandaId,",
+				"          FechaServicio,",
+				"          RutaHistoricaId,",
+				"          ParadaHistoricaId,",
+				"          Franja,",
+				"          ValidacionesTarjeta,",
+				"          Descensos,",
+				"          DemandaNoAtendida,",
+				"          Metodo",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}
