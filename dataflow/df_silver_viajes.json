@@ -36,6 +36,9 @@
 				},
 				{
 					"name": "aggregate1"
+				},
+				{
+					"name": "FilterTotales"
 				}
 			],
 			"scriptLines": [
@@ -56,15 +59,16 @@
 				"     validateSchema: false,",
 				"     isolationLevel: 'READ_UNCOMMITTED',",
 				"     format: 'table') ~> source1",
-				"source1 derive(FechaServicio = iif(instr(FechaServicio, '/') > 0, toDate(FechaServicio, 'dd/MM/yyyy'), toDate(FechaServicio, 'yyyy-MM-dd')),",
-				"          HoraProgramada = toTimestamp(right(trim(HoraProgramada), 8), 'HH:mm:ss'),",
-				"          HoraSalida = toTimestamp(right(trim(HoraSalida), 8), 'HH:mm:ss'),",
-				"          HoraLlegada = toTimestamp(right(trim(HoraLlegada), 8), 'HH:mm:ss')) ~> derivedColumn1",
-				"derivedColumn1 derive(ViajeId = iif(     !isNull(ViajeId) && startsWith(trim(ViajeId), 'VJ-'),     trim(ViajeId),     concat(         'VJ-',         iif(             instr(toString(FechaServicio), '/') > 0,              right(trim(toString(FechaServicio)), 4),              left(trim(toString(FechaServicio)), 4)         ),         '-',         lpad(trim(ViajeId), 5, '0')     ) ),",
-				"          RutaHistoricaId = iif(startsWith(trim(RutaHistoricaId), 'RH-'), trim(RutaHistoricaId), iif(startsWith(trim(RutaHistoricaId), 'R-'), concat('RH-', substring(trim(RutaHistoricaId), 3, length(trim(RutaHistoricaId)))), iif(startsWith(trim(RutaHistoricaId), 'Ruta '), concat('RH-', lpad(trim(substring(trim(RutaHistoricaId), 5, length(trim(RutaHistoricaId)))), 2, '0')), concat('RH-', lpad(trim(RutaHistoricaId), 2, '0'))))),",
+				"FilterTotales derive(FechaServicio = iif(instr(FechaServicio, '/') > 0, toDate(FechaServicio, 'dd/MM/yyyy'), toDate(FechaServicio, 'yyyy-MM-dd')),",
+				"          HoraProgramada = iif(     length(trim(toString(HoraProgramada))) == 5,     toTimestamp(concat(trim(toString(HoraProgramada)), ':00'), 'HH:mm:ss'),     iif(         instr(toString(HoraProgramada), 'T') > 0,         toTimestamp(substring(toString(HoraProgramada), instr(toString(HoraProgramada), 'T') + 1, 8), 'HH:mm:ss'),         toTimestamp(right(trim(toString(HoraProgramada)), 8), 'HH:mm:ss')     ) ),",
+				"          HoraSalida = iif(     length(trim(toString(HoraSalida))) == 5,     toTimestamp(concat(trim(toString(HoraSalida)), ':00'), 'HH:mm:ss'),     iif(         instr(toString(HoraSalida), 'T') > 0,         toTimestamp(substring(toString(HoraSalida), instr(toString(HoraSalida), 'T') + 1, 8), 'HH:mm:ss'),         toTimestamp(right(trim(toString(HoraSalida)), 8), 'HH:mm:ss')     ) ),",
+				"          HoraLlegada = iif(     length(trim(toString(HoraLlegada))) == 5,     toTimestamp(concat(trim(toString(HoraLlegada)), ':00'), 'HH:mm:ss'),     iif(         instr(toString(HoraLlegada), 'T') > 0,         toTimestamp(substring(toString(HoraLlegada), instr(toString(HoraLlegada), 'T') + 1, 8), 'HH:mm:ss'),         toTimestamp(right(trim(toString(HoraLlegada)), 8), 'HH:mm:ss')     ) )) ~> derivedColumn1",
+				"derivedColumn1 derive(ViajeId = iif(     !isNull(ViajeId) && startsWith(trim(ViajeId), 'VJ-'),     trim(ViajeId),     concat(         'VJ-',         coalesce(toString(year(FechaServicio)), '1900'),         '-',         lpad(trim(ViajeId), 5, '0')     ) ),",
+				"          RutaHistoricaId = iif(     startsWith(trim(RutaHistoricaId), 'RH-'),     trim(RutaHistoricaId),     iif(         startsWith(trim(RutaHistoricaId), 'R12-'),         concat('RH-12-', right(trim(RutaHistoricaId), 1)),         iif(             startsWith(trim(RutaHistoricaId), 'R-'),             concat('RH-', substring(trim(RutaHistoricaId), 3, length(trim(RutaHistoricaId)))),             iif(                 startsWith(trim(RutaHistoricaId), 'Ruta '),                 concat('RH-', lpad(trim(substring(trim(RutaHistoricaId), 5, length(trim(RutaHistoricaId)))), 2, '0')),                 concat('RH-', lpad(trim(RutaHistoricaId), 2, '0'))             )         )     ) )\r",
+				",",
 				"          VehiculoId = iif(startsWith(trim(VehiculoId), 'V-'), trim(VehiculoId), concat('V-', lpad(trim(VehiculoId), 3, '0'))),",
 				"          EstadoViaje = upper(trim(EstadoViaje))) ~> derivedColumn2",
-				"derivedColumn2 derive(ValidacionesTarjeta = iif(isNull(ValidacionesTarjeta) || trim(ValidacionesTarjeta) == '', 0, toInteger(trim(ValidacionesTarjeta))),",
+				"derivedColumn2 derive(ValidacionesTarjeta = iif(     isNull(ValidacionesTarjeta) || trim(ValidacionesTarjeta) == '',     0,     toInteger(trim(ValidacionesTarjeta)) ),",
 				"          KmRecorridos = toDecimal(replace(trim(KmRecorridos), ',', '.'), 10, 2)) ~> derivedColumn3",
 				"derivedColumn3 aggregate(groupBy(ViajeId),",
 				"     RutaHistoricaId = first(RutaHistoricaId),",
@@ -76,6 +80,7 @@
 				"          ValidacionesTarjeta = first(ValidacionesTarjeta),",
 				"          KmRecorridos = first(KmRecorridos),",
 				"          EstadoViaje = first(EstadoViaje)) ~> aggregate1",
+				"source1 filter(!isNull(FechaServicio) && !startsWith(ViajeId, 'TOTAL_')) ~> FilterTotales",
 				"aggregate1 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
