@@ -39,6 +39,9 @@
 				},
 				{
 					"name": "surrogateKey1"
+				},
+				{
+					"name": "derivedColumn4"
 				}
 			],
 			"scriptLines": [
@@ -58,11 +61,10 @@
 				"     validateSchema: false,",
 				"     isolationLevel: 'READ_UNCOMMITTED',",
 				"     format: 'table') ~> source1",
-				"surrogateKey1 derive(DemandaId = iif(     !isNull(DemandaId) && trim(DemandaId) != '',      trim(DemandaId),      concat(         'DM-',          iif(             instr(toString(FechaServicio), '/') > 0,              right(trim(toString(FechaServicio)), 4),              left(trim(toString(FechaServicio)), 4)         ),          '-',          lpad(toString(byName('row_num')), 5, '0')     ) ),",
-				"          RutaHistoricaId = iif(startsWith(trim(RutaHistoricaId), 'RH-'), trim(RutaHistoricaId), iif(startsWith(trim(RutaHistoricaId), 'R-'), concat('RH-', substring(trim(RutaHistoricaId), 3, length(trim(RutaHistoricaId)))), iif(startsWith(trim(RutaHistoricaId), 'Ruta '), concat('RH-', lpad(trim(substring(trim(RutaHistoricaId), 6, length(trim(RutaHistoricaId)))), 2, '0')), concat('RH-', lpad(trim(RutaHistoricaId), 2, '0'))))),",
+				"derivedColumn4 derive(DemandaId = iif(     !isNull(DemandaId) && trim(DemandaId) != '',     trim(DemandaId),     concat(         'DM-',         toString(year(FechaServicio)),         '-',         lpad(toString(byName('row_num')), 5, '0')     ) ),",
+				"          RutaHistoricaId = iif(     startsWith(trim(RutaHistoricaId), 'RH-'),     trim(RutaHistoricaId),     iif(         startsWith(trim(RutaHistoricaId), 'R12-'),         concat('RH-12-', right(trim(RutaHistoricaId), 1)),         iif(             startsWith(trim(RutaHistoricaId), 'R-'),             concat('RH-', substring(trim(RutaHistoricaId), 3, length(trim(RutaHistoricaId)))),             iif(                 startsWith(trim(RutaHistoricaId), 'Ruta '),                 concat('RH-', lpad(trim(substring(trim(RutaHistoricaId), 6, length(trim(RutaHistoricaId)))), 2, '0')),                 concat('RH-', lpad(trim(RutaHistoricaId), 2, '0'))             )         )     ) ),",
 				"          ParadaHistoricaId = regexReplace(regexReplace(trim(ParadaHistoricaId), '(-MC)?-NEW$', ''), '^MC-01$', 'P220')) ~> derivedColumn1",
-				"derivedColumn1 derive(FechaServicio = iif(     instr(toString(FechaServicio), '/') > 0,      toDate(toString(FechaServicio), 'dd/MM/yyyy'),      iif(         instr(toString(FechaServicio), '-') > 0,          toDate(toString(FechaServicio), 'yyyy-MM-dd'),          toDate(toTimestamp(toLong(trim(toString(FechaServicio))) * 86400000 - 2209161600000L))     ) ),",
-				"          Franja = trim(Franja),",
+				"derivedColumn1 derive(Franja = trim(Franja),",
 				"          ValidacionesTarjeta = iif(isNull(ValidacionesTarjeta) || trim(ValidacionesTarjeta) == '', 0, toInteger(trim(ValidacionesTarjeta)))) ~> derivedColumn2",
 				"derivedColumn2 derive(Descensos = iif(isNull(Descensos) || trim(Descensos) == '', 0, toInteger(trim(Descensos))),",
 				"          DemandaNoAtendida = iif(isNull(DemandaNoAtendida) || trim(DemandaNoAtendida) == '', 0, toInteger(trim(DemandaNoAtendida))),",
@@ -79,6 +81,7 @@
 				"source1 keyGenerate(output(row_num as long),",
 				"     startAt: 1L,",
 				"     stepValue: 1L) ~> surrogateKey1",
+				"surrogateKey1 derive(FechaServicio = iif(     instr(FechaServicio, '/') > 0,     toDate(FechaServicio, 'dd/MM/yyyy'),     iif(         length(trim(FechaServicio)) == 10,         toDate(FechaServicio, 'yyyy-MM-dd'),         addDays(toDate('1899-12-30'), toInteger(trim(FechaServicio)))     ) )) ~> derivedColumn4",
 				"aggregate1 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",

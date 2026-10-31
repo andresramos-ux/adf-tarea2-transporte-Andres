@@ -22,7 +22,7 @@
 					"scripts": [
 						{
 							"type": "NonQuery",
-							"text": "delete from silver.DemandaParadas\ndelete from silver.IncidenteRuta\ndelete from silver.Incidentes\ndelete from silver.Paradas\ndelete from silver.Rutas\ndelete from silver.Vehiculos\ndelete from silver.Viajes"
+							"text": "delete from silver.IncidenteRuta\ndelete from silver.DemandaParadas\ndelete from silver.Viajes\ndelete from silver.Incidentes\ndelete from silver.Rutas\ndelete from silver.Paradas\ndelete from silver.Vehiculos"
 						}
 					],
 					"scriptBlockExecutionTimeout": "02:00:00"
