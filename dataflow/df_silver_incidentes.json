@@ -30,6 +30,9 @@
 				},
 				{
 					"name": "derivedColumn2"
+				},
+				{
+					"name": "aggregate1"
 				}
 			],
 			"scriptLines": [
@@ -52,11 +55,19 @@
 				"          TipoIncidente = upper(trim(TipoIncidente)),",
 				"          Severidad = upper(trim(Severidad)),",
 				"          Descripcion = trim(Descripcion)) ~> derivedColumn1",
-				"derivedColumn1 derive(FechaHoraInicio = iif(instr(FechaHoraInicio, '/') > 0, toTimestamp(concat(FechaHoraInicio, ' 00:00:00'), 'dd/MM/yyyy HH:mm:ss'), toTimestamp(FechaHoraInicio, 'yyyy-MM-dd HH:mm:ss')),",
-				"          FechaHoraFin = iif(instr(FechaHoraFin, '/') > 0, toTimestamp(concat(FechaHoraFin, ' 00:00:00'), 'dd/MM/yyyy HH:mm:ss'), toTimestamp(FechaHoraFin, 'yyyy-MM-dd HH:mm:ss')),",
-				"          FechaHoraRegistro = iif(instr(FechaHoraRegistro, '/') > 0, toTimestamp(concat(FechaHoraRegistro, ' 00:00:00'), 'dd/MM/yyyy HH:mm:ss'), toTimestamp(FechaHoraRegistro, 'yyyy-MM-dd HH:mm:ss')),",
+				"derivedColumn1 derive(FechaHoraInicio = iif(     instr(FechaHoraInicio, '/') > 0,     toTimestamp(FechaHoraInicio, 'dd/MM/yyyy'),     toTimestamp(         iif(length(trim(FechaHoraInicio)) == 10, concat(trim(FechaHoraInicio), ' 00:00:00'), trim(FechaHoraInicio)),         'yyyy-MM-dd HH:mm:ss'     ) ),",
+				"          FechaHoraFin = iif(     instr(FechaHoraFin, '/') > 0,     toTimestamp(FechaHoraFin, 'dd/MM/yyyy'),     toTimestamp(         iif(length(trim(FechaHoraFin)) == 10, concat(trim(FechaHoraFin), ' 00:00:00'), trim(FechaHoraFin)),         'yyyy-MM-dd HH:mm:ss'     ) ),",
+				"          FechaHoraRegistro = iif(     instr(FechaHoraRegistro, '/') > 0,     toTimestamp(FechaHoraRegistro, 'dd/MM/yyyy'),     toTimestamp(         iif(length(trim(FechaHoraRegistro)) == 10, concat(trim(FechaHoraRegistro), ' 00:00:00'), trim(FechaHoraRegistro)),         'yyyy-MM-dd HH:mm:ss'     ) ),",
 				"          VehiculoId = iif(isNull(VehiculoId) || trim(VehiculoId) == '', toString(null()), trim(VehiculoId))) ~> derivedColumn2",
-				"derivedColumn2 sink(allowSchemaDrift: true,",
+				"derivedColumn2 aggregate(groupBy(IncidenteId),",
+				"     TipoIncidente = first(TipoIncidente),",
+				"          Severidad = first(Severidad),",
+				"          FechaHoraInicio = first(FechaHoraInicio),",
+				"          FechaHoraFin = first(FechaHoraFin),",
+				"          FechaHoraRegistro = first(FechaHoraRegistro),",
+				"          VehiculoId = first(VehiculoId),",
+				"          Descripcion = first(Descripcion)) ~> aggregate1",
+				"aggregate1 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
 				"          IncidenteId as string,",

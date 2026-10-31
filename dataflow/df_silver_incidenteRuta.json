@@ -27,6 +27,9 @@
 			"transformations": [
 				{
 					"name": "derivedColumn1"
+				},
+				{
+					"name": "aggregate1"
 				}
 			],
 			"scriptLines": [
@@ -43,7 +46,10 @@
 				"source1 derive(IncidenteId = trim(IncidenteId),",
 				"          RutaHistoricaId = trim(RutaHistoricaId),",
 				"          EsPrincipal = iif(lower(trim(EsPrincipal)) == 'true' || trim(EsPrincipal) == '1', true(), false())) ~> derivedColumn1",
-				"derivedColumn1 sink(allowSchemaDrift: true,",
+				"derivedColumn1 aggregate(groupBy(IncidenteId,",
+				"          RutaHistoricaId),",
+				"     EsPrincipal = first(EsPrincipal)) ~> aggregate1",
+				"aggregate1 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
 				"          IncidenteId as string,",

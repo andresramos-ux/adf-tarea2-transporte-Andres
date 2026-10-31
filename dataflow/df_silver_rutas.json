@@ -33,6 +33,9 @@
 				},
 				{
 					"name": "derivedColumn3"
+				},
+				{
+					"name": "aggregate1"
 				}
 			],
 			"scriptLines": [
@@ -59,7 +62,15 @@
 				"          Estado = upper(trim(Estado))) ~> derivedColumn2",
 				"derivedColumn2 derive(VigenciaDesde = iif(isInteger(VigenciaDesde), addDays(toDate('1899-12-30'), toInteger(VigenciaDesde)), iif(instr(VigenciaDesde, '/') > 0, toDate(VigenciaDesde, 'dd/MM/yyyy'), toDate(VigenciaDesde, 'yyyy-MM-dd'))),",
 				"          VigenciaHasta = iif(isInteger(VigenciaHasta), addDays(toDate('1899-12-30'), toInteger(VigenciaHasta)), iif(instr(VigenciaHasta, '/') > 0, toDate(VigenciaHasta, 'dd/MM/yyyy'), toDate(VigenciaHasta, 'yyyy-MM-dd')))) ~> derivedColumn3",
-				"derivedColumn3 sink(allowSchemaDrift: true,",
+				"derivedColumn3 aggregate(groupBy(RutaHistoricaId),",
+				"     CodigoRuta = first(CodigoRuta),",
+				"          NombreRuta = first(NombreRuta),",
+				"          Origen = first(Origen),",
+				"          Destino = first(Destino),",
+				"          VigenciaDesde = first(VigenciaDesde),",
+				"          VigenciaHasta = first(VigenciaHasta),",
+				"          Estado = first(Estado)) ~> aggregate1",
+				"aggregate1 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
 				"          RutaHistoricaId as string,",
@@ -80,7 +91,6 @@
 				"     skipDuplicateMapOutputs: true,",
 				"     errorHandlingOption: 'stopOnFirstError',",
 				"     mapColumn(",
-				"          AnioFuente,",
 				"          RutaHistoricaId,",
 				"          CodigoRuta,",
 				"          NombreRuta,",

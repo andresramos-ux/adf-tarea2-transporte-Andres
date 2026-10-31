@@ -33,6 +33,9 @@
 				},
 				{
 					"name": "derivedColumn3"
+				},
+				{
+					"name": "aggregate1"
 				}
 			],
 			"scriptLines": [
@@ -57,13 +60,23 @@
 				"          HoraProgramada = toTimestamp(right(trim(HoraProgramada), 8), 'HH:mm:ss'),",
 				"          HoraSalida = toTimestamp(right(trim(HoraSalida), 8), 'HH:mm:ss'),",
 				"          HoraLlegada = toTimestamp(right(trim(HoraLlegada), 8), 'HH:mm:ss')) ~> derivedColumn1",
-				"derivedColumn1 derive(ViajeId = iif(startsWith(trim(ViajeId), 'VJ-'), trim(ViajeId), concat('VJ-', toString(year(FechaServicio)), '-', lpad(trim(ViajeId), 5, '0'))),",
+				"derivedColumn1 derive(ViajeId = iif(     !isNull(ViajeId) && startsWith(trim(ViajeId), 'VJ-'),     trim(ViajeId),     concat(         'VJ-',         iif(             instr(toString(FechaServicio), '/') > 0,              right(trim(toString(FechaServicio)), 4),              left(trim(toString(FechaServicio)), 4)         ),         '-',         lpad(trim(ViajeId), 5, '0')     ) ),",
 				"          RutaHistoricaId = iif(startsWith(trim(RutaHistoricaId), 'RH-'), trim(RutaHistoricaId), iif(startsWith(trim(RutaHistoricaId), 'R-'), concat('RH-', substring(trim(RutaHistoricaId), 3, length(trim(RutaHistoricaId)))), iif(startsWith(trim(RutaHistoricaId), 'Ruta '), concat('RH-', lpad(trim(substring(trim(RutaHistoricaId), 5, length(trim(RutaHistoricaId)))), 2, '0')), concat('RH-', lpad(trim(RutaHistoricaId), 2, '0'))))),",
 				"          VehiculoId = iif(startsWith(trim(VehiculoId), 'V-'), trim(VehiculoId), concat('V-', lpad(trim(VehiculoId), 3, '0'))),",
 				"          EstadoViaje = upper(trim(EstadoViaje))) ~> derivedColumn2",
 				"derivedColumn2 derive(ValidacionesTarjeta = iif(isNull(ValidacionesTarjeta) || trim(ValidacionesTarjeta) == '', 0, toInteger(trim(ValidacionesTarjeta))),",
 				"          KmRecorridos = toDecimal(replace(trim(KmRecorridos), ',', '.'), 10, 2)) ~> derivedColumn3",
-				"derivedColumn3 sink(allowSchemaDrift: true,",
+				"derivedColumn3 aggregate(groupBy(ViajeId),",
+				"     RutaHistoricaId = first(RutaHistoricaId),",
+				"          VehiculoId = first(VehiculoId),",
+				"          FechaServicio = first(FechaServicio),",
+				"          HoraProgramada = first(HoraProgramada),",
+				"          HoraSalida = first(HoraSalida),",
+				"          HoraLlegada = first(HoraLlegada),",
+				"          ValidacionesTarjeta = first(ValidacionesTarjeta),",
+				"          KmRecorridos = first(KmRecorridos),",
+				"          EstadoViaje = first(EstadoViaje)) ~> aggregate1",
+				"aggregate1 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
 				"          ViajeId as string,",
